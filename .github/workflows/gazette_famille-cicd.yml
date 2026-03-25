@@ -1,0 +1,51 @@
+name: GAZETTE_FAMILLE CI/CD
+
+on:
+  push:
+    paths:
+      - 'gazette_famille/**'
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        
+    - name: Get dependencies
+      working-directory: gazette_famille
+      run: flutter pub get
+      
+    - name: Build APK
+      working-directory: gazette_famille
+      run: flutter build apk --release
+      
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: gazette_famille-v${{ github.run_number }}
+        name: GAZETTE_FAMILLE v${{ github.run_number }}
+        body: |
+          🔥 GAZETTE_FAMILLE APK ready!
+          
+          📱 Download & install sur Android
+          🚀 Build #${{ github.run_number }}
+          
+          @Mika - Ready for business test! 💰
+        files: gazette_famille/build/app/outputs/flutter-apk/app-release.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
