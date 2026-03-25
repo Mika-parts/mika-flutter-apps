@@ -1,0 +1,78 @@
+name: FamAgenda Android CI/CD
+
+on:
+  push:
+    paths:
+      - 'famagenda/**'
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'famagenda/**'
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        channel: 'stable'
+        
+    - name: Get dependencies
+      working-directory: famagenda
+      run: flutter pub get
+      
+    - name: Run tests
+      working-directory: famagenda
+      run: flutter test
+      
+    - name: Build APK
+      working-directory: famagenda
+      run: flutter build apk --release
+      
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: famagenda-apk
+        path: famagenda/build/app/outputs/flutter-apk/app-release.apk
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: famagenda-v${{ github.run_number }}
+        release_name: FamAgenda v${{ github.run_number }}
+        body: |
+          🔥 Nouveau build FamAgenda !
+          
+          📱 APK Android prêt pour test
+          🚀 Build automatique #${{ github.run_number }}
+          
+          @Iainh @Mika - Prêt à tester !
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: famagenda/build/app/outputs/flutter-apk/app-release.apk
+        asset_name: FamAgenda-v${{ github.run_number }}.apk
+        asset_content_type: application/vnd.android.package-archive
